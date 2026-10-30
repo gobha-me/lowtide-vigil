@@ -1,8 +1,9 @@
 .godot/
 .import/
-export_presets.cfg
 export_credentials.cfg
 *.translation
 build/
 exports/
 .codex-run/
+
+__pycache__/
