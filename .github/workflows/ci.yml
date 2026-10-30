@@ -33,6 +33,25 @@ jobs:
           test -f project.godot
           godot --headless --path . --import 2>&1 | tee "$TMPDIR/import.log"
           if grep -Eq '(^ERROR:|^SCRIPT ERROR:)' "$TMPDIR/import.log"; then exit 1; fi
+      - name: Run GUT headless
+        run: |
+          set -euo pipefail
+          test -f addons/gut/gut_cmdln.gd
+          test -f tools/gut-ci-post-run.gd
+          test -d test
+          test_script=$(find test -type f -name 'test_*.gd' -print -quit)
+          test -n "$test_script"
+          godot --headless --path . --script addons/gut/gut_cmdln.gd \
+            -gconfig= -gdir=res://test -ginclude_subdirs -gprefix=test_ -gsuffix=.gd \
+            -gpost_run_script=res://tools/gut-ci-post-run.gd \
+            -gexit -gignore_pause -gdisable_colors 2>&1 | tee "$TMPDIR/gut.log"
+          # GUT can exit zero before running tests; require the strict hook's success marker.
+          grep -Fxq 'GUT CI: passed' "$TMPDIR/gut.log"
+          if grep -Eq '(^ERROR:|^SCRIPT ERROR:)' "$TMPDIR/gut.log"; then exit 1; fi
+      # Contract: tools/planted-mutants.sh must apply each planted mutant, run GUT,
+      # list surviving mutants by name, and exit non-zero if any survive.
+      - name: Check planted mutants
+        run: bash tools/planted-mutants.sh
       - name: Install pinned GDScript tooling
         run: python3 -m pip install gdtoolkit==4.5.0
       - name: Check GDScript style
@@ -41,8 +60,8 @@ jobs:
           test -d scripts
           script=$(find scripts -type f -name '*.gd' -print -quit)
           test -n "$script"
-          gdlint scripts
-          gdformat --check scripts
+          gdlint scripts tools/gut-ci-post-run.gd
+          gdformat --check scripts tools/gut-ci-post-run.gd
       - name: Check player-facing terminology
         run: |
           set -euo pipefail
