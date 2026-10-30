@@ -71,10 +71,11 @@ class WebText(HTMLParser):
 
     SINK = re.compile(
         r"\b(?:fillText|strokeText|fillTextWrap|text|ftext|banner|offerCards|"
-        r"drawText|showMessage|alert|confirm|prompt)\s*\("
-        r"|\.(?:textContent|innerText|innerHTML|outerHTML|title|ariaLabel)\s*="
-        r"|\b(?:name|title|desc|description|label|caption|message|text)\s*:"
-        r"|\b(?:SIGNNAME|SIGN_NAMES|UI_TEXT)\s*=",
+        r"drawText|ptxt|add|mk_|showMessage|alert|confirm|prompt)\s*\("
+        r"|\.(?:textContent|innerText|innerHTML|outerHTML|title|ariaLabel|value)\s*="
+        r"|\.(?:setAttribute|insertAdjacentHTML|insertAdjacentText|createTextNode)\s*\("
+        r"|\b(?:name|short|title|desc|description|label|caption|message|text)\s*[:=]"
+        r"|\b(?:SIGNNAME|SIGN_NAMES|UI_TEXT|RARN)\s*=",
         re.I,
     )
 
