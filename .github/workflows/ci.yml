@@ -2,16 +2,52 @@ name: CI
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   ci:
     name: ci
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      GODOT_SILENCE_ROOT_WARNING: '1'
+      XDG_CACHE_HOME: ${{ github.workspace }}/.codex-run/cache
+      XDG_DATA_HOME: ${{ github.workspace }}/.codex-run/data
+      XDG_CONFIG_HOME: ${{ github.workspace }}/.codex-run/config
+      TMPDIR: /tmp/lowtide-m1-ci
     steps:
       - uses: actions/checkout@v4
-      - name: Run term gate if present
+        with:
+          fetch-depth: 0
+      - name: Prepare scratch directory
+        run: mkdir -p "$TMPDIR"
+      - name: Install Godot 4.7.2 and Linux export templates (SHA-512 verified)
+        run: bash tools/install-godot-ci.sh
+      - name: Import Godot project
         run: |
-          if [ -f tools/term-gate.sh ]; then
-            bash tools/term-gate.sh
-          else
-            echo "term gate not present yet"
-          fi
+          godot --headless --path . --import 2>&1 | tee "$TMPDIR/import.log"
+          if grep -Eq '(^ERROR:|^SCRIPT ERROR:)' "$TMPDIR/import.log"; then exit 1; fi
+      - name: Install pinned GDScript tooling
+        run: python3 -m pip install gdtoolkit==4.5.0
+      - name: Check GDScript style
+        run: |
+          gdlint scripts
+          gdformat --check scripts
+      - name: Check player-facing terminology
+        run: bash tools/term-gate.sh
+      - name: Install gitleaks 8.24.3 (SHA-256 verified)
+        run: bash tools/install-gitleaks-ci.sh
+      - name: Scan history for secrets
+        run: gitleaks git --redact --no-banner --exit-code 1 .
+      - name: Export Linux x86_64 release
+        run: |
+          mkdir -p build/linux
+          godot --headless --path . --export-release "Linux/X11" 2>&1 | tee "$TMPDIR/export.log"
+          if grep -Eq '(^ERROR:|^SCRIPT ERROR:)' "$TMPDIR/export.log"; then exit 1; fi
+      - name: Remove scratch directory
+        if: always()
+        run: python3 -c 'import os,shutil; shutil.rmtree(os.environ["TMPDIR"], ignore_errors=True)'

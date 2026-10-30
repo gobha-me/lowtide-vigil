@@ -7,3 +7,5 @@ exports/
 .codex-run/
 
 __pycache__/
+
+.ci-bin/
