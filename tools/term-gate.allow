@@ -1,0 +1,5 @@
+tools/term-gate.sh  # The gate entrypoint documents its own policy.
+tools/term_gate.py  # The scanner must contain the forbidden vocabulary.
+tools/term-gate.allow  # The allowlist names the gate's own files.
+assets/fonts/*/OFL.txt  # Preserve upstream font licence and attribution verbatim.
+addons/gut/LICENSE.txt  # Preserve the upstream addon licence and attribution verbatim.
