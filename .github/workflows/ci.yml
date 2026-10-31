@@ -53,7 +53,7 @@ jobs:
       - name: Check planted mutants
         run: bash tools/planted-mutants.sh
       - name: Install pinned GDScript tooling
-        run: python3 -m pip install gdtoolkit==4.5.0
+        run: python3 -m pip install --require-hashes -r tools/ci-requirements.txt
       - name: Check GDScript style
         run: |
           set -euo pipefail
