@@ -47,10 +47,16 @@ def strings(source, language):
 
 
 def decoded(value):
-    # Decode text escapes without treating ordinary UTF-8 as escaped bytes.
+    # One pass preserves escaped backslashes and ordinary UTF-8. Callers split
+    # physical source lines first, so rendered newlines do not shift diagnostics.
+    escapes = {
+        "a": "\a", "b": "\b", "f": "\f", "n": "\n", "r": "\r",
+        "t": "\t", "v": "\v", "0": "\0", "\\": "\\", '"': '"', "'": "'", "/": "/",
+    }
     value = re.sub(
-        r"\\u([0-9a-fA-F]{4})|\\x([0-9a-fA-F]{2})",
-        lambda match: chr(int(match[1] or match[2], 16)),
+        r"\\(?:u([0-9a-fA-F]{4})|x([0-9a-fA-F]{2})|([abfnrtv0\\\"'/]))",
+        lambda match: chr(int(match[1] or match[2], 16))
+        if match[1] or match[2] else escapes[match[3]],
         value,
     )
     return html.unescape(value)
@@ -78,6 +84,11 @@ class WebText(HTMLParser):
         r"|\b(?:SIGNNAME|SIGN_NAMES|UI_TEXT|RARN)\s*=",
         re.I,
     )
+    # Maintained presentation-data scope: drawHUD's touch/keyboard tutorial
+    # arrays in web/lowtide-vigil.html. The following lines.forEach callback
+    # renders each element via ptxt. Inspect only literals in this declaration,
+    # not every variable named lines, nor identifiers, CSS or other JS tokens.
+    PRESENTATION_DATA = re.compile(r"\bconst\s+lines\s*=\s*TOUCH\.on\s*\?")
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
@@ -109,7 +120,11 @@ class WebText(HTMLParser):
                 right = data.find("\n", end)
                 right = len(data) if right < 0 else right
                 context = data[left:right]
-                if self.SINK.search(context) or "<" in value:
+                if (
+                    self.SINK.search(context)
+                    or self.PRESENTATION_DATA.search(context)
+                    or "<" in value
+                ):
                     self.parts.append((value, base + data.count("\n", 0, start)))
 
 
