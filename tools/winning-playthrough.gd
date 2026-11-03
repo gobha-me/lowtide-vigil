@@ -1,9 +1,9 @@
-extends SceneTree
+extends Node
 ## External observer/controller: all gameplay changes come from ordinary input events.
 
 const ROUTE := ["EMBERS", "FONT", "EMBERS", "FONT", "THE DROWNED TOLLING"]
 const MAX_FRAMES := 18000
-const WAYPOINTS := [Vector2(1100, 580), Vector2(1100, 240), Vector2(180, 240), Vector2(180, 580)]
+const WAYPOINTS := [Vector2(1100, 580), Vector2(1100, 325), Vector2(180, 325), Vector2(180, 580)]
 
 var game: Node
 var frame := 0
@@ -19,33 +19,25 @@ var last_hp := 5
 var finished := false
 
 
-func _initialize() -> void:
+func _enter_tree() -> void:
 	seed(3)
-	_load_game.call_deferred()
 
 
-func _load_game() -> void:
-	var scene := load("res://scenes/vigil.tscn") as PackedScene
-	if scene == null:
-		_fail("packed main scene missing")
+func _process(_delta: float) -> void:
+	if finished:
 		return
-	game = scene.instantiate()
-	root.add_child(game)
-	current_scene = game
-
-
-func _process(_delta: float) -> bool:
-	if finished or game == null:
-		return false
 	frame += 1
 	if frame >= MAX_FRAMES:
 		_fail("frame budget exhausted")
-		return false
-	if menu_stage < 6:
+		return
+	if game == null:
+		game = get_tree().current_scene
+		if game == null:
+			return
+	if menu_stage < 9:
 		_title_input()
-		return false
+		return
 	_play_input()
-	return false
 
 
 func _play_input() -> void:
@@ -57,7 +49,7 @@ func _play_input() -> void:
 		return
 	if game.room != previous_room:
 		if game.room != previous_room + 1 or game.reward != ROUTE[previous_room]:
-			_fail("unexpected room transition")
+			_fail("unexpected room transition: room=%d reward=%s" % [game.room, game.reward])
 			return
 		previous_room = game.room
 		waypoint = 0
@@ -103,24 +95,27 @@ func _title_input() -> void:
 			_key(KEY_ENTER, true)
 		2:
 			_key(KEY_ENTER, false)
+		3:
 			if not _panel_has("CARRY THE LIGHT"):
 				_fail("controls button did not open controls")
 				return
 			print("PLAYTHROUGH CONTROLS frame=%d" % frame)
 			_key(KEY_ENTER, true)
-		3:
+		4:
 			_key(KEY_ENTER, false)
+		5:
 			if not _panel_has("LOWTIDE VIGIL"):
 				_fail("back button did not return to title")
 				return
 			_key(KEY_ENTER, true)
-		4:
+		6:
 			_key(KEY_ENTER, false)
+		7:
 			if game.state != "play" or game.room != 0 or game.keeper.hp != 5:
 				_fail("begin button did not start an ordinary run")
 				return
 			print("PLAYTHROUGH BEGIN frame=%d hp=%d" % [frame, game.keeper.hp])
-		5:
+		8:
 			pass
 	menu_stage += 1
 
@@ -154,10 +149,10 @@ func _fight() -> void:
 					_fail("boss did not start at 100 hp")
 					return
 				saw_boss = true
-				print("PLAYTHROUGH BOSS frame=%d hp=%g max_hp=%g" % [frame, foe.hp, foe.max_hp])
+				print("PLAYTHROUGH BOSS frame=%d hp=%.1f max_hp=%.1f" % [frame, foe.hp, foe.max_hp])
 			if foe.second_phase and not saw_phase:
 				saw_phase = true
-				print("PLAYTHROUGH PHASE2 frame=%d boss_hp=%g hp=%d" % [frame, foe.hp, last_hp])
+				print("PLAYTHROUGH PHASE2 frame=%d boss_hp=%.1f hp=%d" % [frame, foe.hp, last_hp])
 	var aim := (nearest.position - position).normalized()
 	_axis(JOY_AXIS_RIGHT_X, aim.x)
 	_axis(JOY_AXIS_RIGHT_Y, aim.y)
@@ -206,7 +201,8 @@ func _verify_win() -> void:
 		)
 	)
 	finished = true
-	quit(0)
+	print("WINNING PLAYTHROUGH: passed")
+	get_tree().quit(0)
 
 
 func _panel_has(text: String) -> bool:
@@ -240,4 +236,4 @@ func _key(code: Key, pressed: bool) -> void:
 func _fail(reason: String) -> void:
 	printerr("PLAYTHROUGH FAIL frame=%d reason=%s" % [frame, reason])
 	finished = true
-	quit(1)
+	get_tree().quit(1)

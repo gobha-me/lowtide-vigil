@@ -69,6 +69,14 @@ mutants=(
 	'vigil-room-rewards|scripts/vigil.gd|ROOM_REWARDS[mini(room, ROOM_REWARDS.size() - 1)]|ROOM_REWARDS[mini(room, ROOM_REWARDS.size() - 2)]'
 	'vigil-ordeal-count|scripts/vigil.gd|count += 1|count += 0'
 	'interface-hud-flames|scripts/interface.gd|"* " if index < keeper.hp else ". "|"* " if index <= keeper.hp else ". "'
+	'wrapper-child-status|tools/winning-playthrough.sh|if ((result != 0)); then|if ((result < 0)); then'
+	'wrapper-engine-errors|tools/winning-playthrough.sh|if grep -Eq|if false && grep -Eq'
+	'wrapper-victory-required|tools/winning-playthrough.sh|if ! grep -Fxq|if false && grep -Fxq'
+	'wrapper-victory-whole-line|tools/winning-playthrough.sh|grep -Fxq|grep -Fq'
+	'wrapper-empty-pack|tools/winning-playthrough.sh|-s "$pack"|-f "$pack"'
+	'wrapper-driver-required|tools/winning-playthrough.sh|-f "$driver"|-n "$driver"'
+	'wrapper-startup-required|tools/winning-playthrough.sh|run_export startup.log --quit-after 120|: startup smoke skipped'
+	'wrapper-preserve-binary|tools/winning-playthrough.sh|cp -- "$binary"|mv -- "$binary"'
 )
 
 results=()

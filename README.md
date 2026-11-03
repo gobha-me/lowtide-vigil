@@ -8,8 +8,8 @@ Godot **4.7.2**, GDScript, Linux first. Open `project.godot` at the repository
 root, or run `godot4 --path .`. The Milestone 1 slice covers **The Overgrown
 Nave**: four rooms chosen by reward signs, then **The Drowned Tolling** and
 a Level 1 victory or defeat. It includes six Kindles, a Font, the
-Candlewright's shop, embers, and a second boss phase. It has no project tests;
-GUT v9.6.1 is bundled and ready for the separate testing work.
+Candlewright's shop, embers, and a second boss phase. GUT v9.6.1 tests cover
+gameplay and verification tooling.
 
 Move with WASD or the left stick. Fire with the mouse (hold left button),
 arrow keys or right stick. Dash with Space, Shift, right mouse, controller
@@ -37,10 +37,13 @@ bash tools/term-gate.sh
 gitleaks git --redact --no-banner .
 mkdir -p build/linux
 heavy-run godot4 --headless --path . --export-release "Linux/X11"
+heavy-run bash tools/winning-playthrough.sh
 ```
 
 The export produces `build/linux/lowtide-vigil.x86_64` and its `.pck`; ship
-both together. Install the matching export templates first. `heavy-run` is
+both together. The input-only exported win check and retained evidence are
+described in [winning playthrough](docs/winning-playthrough.md).
+Install the matching export templates first. `heavy-run` is
 the shared build host's serialization wrapper; on an unshared workstation,
 run the Godot command directly. Vendored addon sources retain upstream
 formatting and licences and are excluded from gdtoolkit style checks.
