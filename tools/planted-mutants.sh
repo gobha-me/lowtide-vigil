@@ -48,6 +48,8 @@ if ! gut_passed "$dir/baseline.log"; then
 fi
 
 # name|file|anchor|replacement (each anchor must occur exactly once in its file)
+# PCK virtual directories expose hidden entries regardless of include_hidden;
+# export-skip-hidden must explicitly filter dot directories to change traversal.
 mutants=(
 	'keeper-light-scale|scripts/keeper.gd|0.5 + 0.5 * float(hp)|0.5 + 0.4 * float(hp)'
 	'keeper-dash-iframes|scripts/keeper.gd|if dash_left > 0.0 or invulnerable > 0.0 or hp <= 0:|if invulnerable > 0.0 or hp <= 0:'
@@ -69,6 +71,16 @@ mutants=(
 	'vigil-room-rewards|scripts/vigil.gd|ROOM_REWARDS[mini(room, ROOM_REWARDS.size() - 1)]|ROOM_REWARDS[mini(room, ROOM_REWARDS.size() - 2)]'
 	'vigil-ordeal-count|scripts/vigil.gd|count += 1|count += 0'
 	'interface-hud-flames|scripts/interface.gd|"* " if index < keeper.hp else ". "|"* " if index <= keeper.hp else ". "'
+	'export-allow-tests|tools/check-export.gd|path.begins_with("res://test/")|false'
+	'export-allow-gut|tools/check-export.gd|path.begins_with("res://addons/gut/")|false'
+	'export-ignore-rejection|tools/check-export.gd|if _failed or _files == 0:|if _files == 0:'
+	'export-skip-descendants|tools/check-export.gd|_list_pack(path.path_join(child) + "/")|pass'
+	'export-skip-hidden|tools/check-export.gd|for child in directory.get_directories():|for child in Array(directory.get_directories()).filter(func(item): return not item.begins_with(".")):'
+	'export-wrong-file-count|tools/check-export.gd|_files += 1|_files += 2'
+	'export-ignore-engine-errors|tools/check-export.sh|then exit 1; fi|then :; fi'
+	'export-relative-pack-path|tools/check-export.sh|pack=$(realpath "$pack")|pack="$pack"'
+	'export-preset-include-tests|export_presets.cfg|,test/*|'
+	'export-preset-include-gut|export_presets.cfg|addons/gut/*,|'
 	'wrapper-child-status|tools/winning-playthrough.sh|if ((result != 0)); then|if ((result < 0)); then'
 	'wrapper-engine-errors|tools/winning-playthrough.sh|if grep -Eq|if false && grep -Eq'
 	'wrapper-victory-required|tools/winning-playthrough.sh|if ! grep -Fxq|if false && grep -Fxq'

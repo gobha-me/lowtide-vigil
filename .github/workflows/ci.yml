@@ -60,8 +60,8 @@ jobs:
           test -d scripts
           script=$(find scripts -type f -name '*.gd' -print -quit)
           test -n "$script"
-          gdlint scripts tools/gut-ci-post-run.gd
-          gdformat --check scripts tools/gut-ci-post-run.gd
+          gdlint scripts tools/gut-ci-post-run.gd tools/check-export.gd
+          gdformat --check scripts tools/gut-ci-post-run.gd tools/check-export.gd
       - name: Check player-facing terminology
         run: |
           set -euo pipefail
@@ -78,6 +78,8 @@ jobs:
           mkdir -p build/linux
           godot --headless --path . --export-release "Linux/X11" 2>&1 | tee "$TMPDIR/export.log"
           if grep -Eq '(^ERROR:|^SCRIPT ERROR:)' "$TMPDIR/export.log"; then exit 1; fi
+      - name: Check Linux pack excludes tests and GUT
+        run: bash tools/check-export.sh
       - name: Remove scratch directory
         if: always()
         run: python3 -c 'import os,shutil; shutil.rmtree(os.environ["TMPDIR"], ignore_errors=True)'
