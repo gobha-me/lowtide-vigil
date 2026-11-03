@@ -48,6 +48,8 @@ if ! gut_passed "$dir/baseline.log"; then
 fi
 
 # name|file|anchor|replacement (each anchor must occur exactly once in its file)
+# PCK virtual directories expose hidden entries regardless of include_hidden;
+# export-skip-hidden must explicitly filter dot directories to change traversal.
 mutants=(
 	'keeper-light-scale|scripts/keeper.gd|0.5 + 0.5 * float(hp)|0.5 + 0.4 * float(hp)'
 	'keeper-dash-iframes|scripts/keeper.gd|if dash_left > 0.0 or invulnerable > 0.0 or hp <= 0:|if invulnerable > 0.0 or hp <= 0:'
@@ -73,7 +75,7 @@ mutants=(
 	'export-allow-gut|tools/check-export.gd|path.begins_with("res://addons/gut/")|false'
 	'export-ignore-rejection|tools/check-export.gd|if _failed or _files == 0:|if _files == 0:'
 	'export-skip-descendants|tools/check-export.gd|_list_pack(path.path_join(child) + "/")|pass'
-	'export-skip-hidden|tools/check-export.gd|directory.include_hidden = true|directory.include_hidden = false'
+	'export-skip-hidden|tools/check-export.gd|for child in directory.get_directories():|for child in Array(directory.get_directories()).filter(func(item): return not item.begins_with(".")):'
 	'export-wrong-file-count|tools/check-export.gd|_files += 1|_files += 2'
 	'export-ignore-engine-errors|tools/check-export.sh|then exit 1; fi|then :; fi'
 	'export-relative-pack-path|tools/check-export.sh|pack=$(realpath "$pack")|pack="$pack"'
