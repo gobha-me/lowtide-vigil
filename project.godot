@@ -6,12 +6,14 @@ config/name="Lowtide Vigil"
 run/main_scene="res://scenes/vigil.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/description="Carry the vigil lantern into the abbey before the tide returns."
+config/icon="res://assets/icon.svg"
 
 [display]
 window/size/viewport_width=1280
 window/size/viewport_height=800
 window/size/window_width_override=1152
 window/size/window_height_override=720
+window/size/mode=0
 window/stretch/mode="canvas_items"
 
 [rendering]

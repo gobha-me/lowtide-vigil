@@ -86,6 +86,8 @@ jobs:
           mkdir -p build/linux
           godot --headless --path . --export-release "Linux/X11" 2>&1 | tee "$TMPDIR/export.log"
           if grep -Eq '(^ERROR:|^SCRIPT ERROR:)' "$TMPDIR/export.log"; then exit 1; fi
+      - name: Smoke check Linux release
+        run: bash tools/export-smoke.sh
       - name: Remove scratch directory
         if: always()
         run: python3 -c 'import os,shutil; shutil.rmtree(os.environ["TMPDIR"], ignore_errors=True)'
