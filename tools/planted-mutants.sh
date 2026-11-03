@@ -77,6 +77,7 @@ mutants=(
 	'wrapper-driver-required|tools/winning-playthrough.sh|-f "$driver"|-n "$driver"'
 	'wrapper-startup-required|tools/winning-playthrough.sh|run_export startup.log --quit-after 120|: startup smoke skipped'
 	'wrapper-preserve-binary|tools/winning-playthrough.sh|cp -- "$binary"|mv -- "$binary"'
+	'browser-resume-start-gate|web/lowtide-vigil.html|resume();PAD.startPrev=st;|resume();if(G.state!=="play")PAD.startPrev=st;'
 )
 
 results=()
