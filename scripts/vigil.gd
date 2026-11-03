@@ -231,6 +231,8 @@ func _enter_room(chosen: String) -> void:
 			3.0
 		)
 
+	ui.update_hud(keeper, embers, room, upgrades)
+
 
 func _spawn_foe(kind: String, point: Vector2, elite: bool = false) -> void:
 	var foe := VigilFoe.new()
