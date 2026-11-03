@@ -1,167 +1,138 @@
-# Exported Linux playthrough evidence
+# Exported Linux winning playthrough
 
-Status: **blocked; no exported win has been demonstrated.** The external driver
-passes Godot's parser and gdtoolkit checks, but the baseline Linux release
-executable does not execute `--script`. Combat and menu automation in this driver
-remain unvalidated. Do not count its presence, parser success, or a normal title
-launch as a passing playthrough.
+Two runs of the baseline Linux release **passed**, both at controller frame
+2,680 with **3/5 HP**, **11 kills**, **18 dashes**, and the visible victory
+panel. The boss entered at **100/100 HP** on frame 1,066; its second phase was
+observed at **49 HP** on frame 1,889 while the keeper had 4 HP.
 
-The inspected baseline is commit `5107b6e`, exported with Godot
-`4.7.2.stable.official.ed1daf0bf`. No production code, export preset, workflow,
-existing assertions, or existing mutants were changed for this investigation.
+Complete wrapper output is tracked in
+[run 1](evidence/winning-playthrough-baseline-01.log) and
+[run 2](evidence/winning-playthrough-baseline-02.log). Their completion times
+were **2026-11-03 02:15:23 UTC** and **2026-11-03 02:16:41 UTC**. Both include
+ordinary startup, every room transition, boss/phase observations, surviving HP,
+the detailed `PLAYTHROUGH PASS`, and the exact `WINNING PLAYTHROUGH: passed`
+marker. Both wrapper invocations exited zero without engine or script errors.
 
-## Driver contract
+## Reproduce
 
-`tools/winning-playthrough.gd` is an external `SceneTree` script, excluded from
-export by the existing preset. It loads `res://scenes/vigil.tscn`; it does not
-load production scripts from the checkout or depend on packed tests/addons.
-
-The driver injects `InputEventKey` and `InputEventJoypadMotion` through
-`Input.parse_input_event`. Keyboard input visits Controls, returns to the title,
-and activates Begin. Analog stick input moves and aims at the nearest foe;
-Space dashes when a projectile or foe threatens the keeper. A rectangular route
-kites foes. Only cleared rooms permit steering into a chosen doorway.
-
-All references to game properties are observations. The driver does not call
-gameplay methods, step the game directly, mutate gameplay fields, replace any
-implementation, or emit combat signals. A fixed RNG seed of 3 is the only
-simulation setup. The intended route is:
-
-1. EMBERS: four ordinary foes.
-2. FONT: real healing and immediate room clear.
-3. EMBERS: six ordinary foes.
-4. FONT: real healing and immediate room clear.
-5. THE DROWNED TOLLING: the ordinary 100 HP boss.
-
-The driver fails on death, an unexpected panel/transition, a missing door, or
-18,000 controller frames. Before its single `PLAYTHROUGH PASS` line it requires
-all five transitions, an observed boss starting at 100/100 HP, observed second
-phase, 11 actual kills, empty foe and upgrade lists, positive keeper HP, and the
-visible victory panel and replay button. The final line reports frame, HP,
-phase, kills, dashes, and route. These are intended assertions, **not observed
-outcomes in this investigation**.
-
-## Observed blocker
-
-The release binary's own `--help` identifies a release export template and does
-not list `--script`, `--main-loop`, or `--check-only`. The editor's help marks
-these options as available only in editor builds and templates compiled with
-`disable_path_overrides=false`. The baseline release ignores `--script` rather
-than rejecting the option: even a minimal external print-and-quit script never
-prints, and tracing shows the executable loading the normal packed main scene
-and gameplay resources instead of opening the external script.
-
-Thus the driver frame budget cannot run in this binary. A wall timeout is
-essential, and a zero exit alone would not prove that the driver ran. The
-initial long-running probes were headless title sessions without a controller,
-not evidence that gameplay or the driver froze. No production gameplay defect
-was established. The parent must decide on a supported external injection
-method or export-template change before gameplay diagnostics resume. Replacing
-the release executable with the editor would not satisfy this test's contract.
-
-## Commands and retained evidence
-
-All commands were run within this worktree with `MAKEFLAGS=-j2`,
-`CMAKE_BUILD_PARALLEL_LEVEL=2`, `GODOT_SILENCE_ROOT_WARNING=1`, and
-`TMPDIR="$PWD/.codex-run/tmp"`. Each heavy command was first attempted as
-`heavy-run COMMAND`. All returned 75 for memory pressure; only then the same
-command ran under `flock /config/engine/loops/heavy.lock`. Runs began around
-21:06 America/New_York on 2026-11-02, outside the quiet period. No import,
-export, or mutation suite was run by the test author.
-
-The following are the exact fallback command bodies. Set `workspace` to this
-worktree's absolute path and first change directory to
-`"$workspace/.codex-run/tmp/playthrough-cwd"` (created empty, without a
-`project.godot`). Godot internally changes to its executable directory to use
-the adjacent PCK.
-
-Normal launch, without any script option, passed with exit 0:
+After exporting the Linux build, run from the repository root:
 
 ```bash
-flock /config/engine/loops/heavy.lock timeout 20s \
-  strace -f -e trace=file,connect \
-  -o "$workspace/.codex-run/evidence/startup-smoke-strace.log" \
-  "$workspace/build/linux/lowtide-vigil.x86_64" \
-  --headless --fixed-fps 60 --quit-after 120 \
-  > "$workspace/.codex-run/evidence/startup-smoke-fallback.log" 2>&1
+mkdir -p .codex-run/tmp .codex-run/evidence
+export TMPDIR="$PWD/.codex-run/tmp"
+export MAKEFLAGS=-j2 CMAKE_BUILD_PARALLEL_LEVEL=2
+heavy-run bash tools/winning-playthrough.sh \
+  > .codex-run/evidence/winning-playthrough.log 2>&1
 ```
 
-The external driver attempt timed out with exit 124 and no driver markers:
+An optional first argument selects another exported `.x86_64` binary with its
+adjacent `.pck`. On the shared host, start outside 23:55–03:00
+America/New_York. These recorded runs first received exit 75 from `heavy-run`
+for memory pressure, then used the owner-authorized fallback:
 
 ```bash
-flock /config/engine/loops/heavy.lock timeout 120s \
-  "$workspace/build/linux/lowtide-vigil.x86_64" \
-  --headless --fixed-fps 60 \
-  --script "$workspace/tools/winning-playthrough.gd" \
-  > "$workspace/.codex-run/evidence/playthrough-attempt-01-fallback.log" 2>&1
+flock /config/engine/loops/heavy.lock bash tools/winning-playthrough.sh \
+  >> .codex-run/evidence/winning-playthrough.log 2>&1
 ```
 
-`playthrough-attempt-02-fallback.log` repeats the failure with a 60-second
-timeout and `--accessibility disabled`; that flag did not resolve it.
-`external-script-probe-fallback.log` and
-`external-script-probe-02-fallback.log` retain the 15-second minimal-script
-failures. The latter used `strace -f -e trace=file,connect`, retained in
-`external-script-trace.log`. The probe in
-`.codex-run/tmp/minimal-driver.gd` contains only:
+Fallback is permitted only after exit 75 and outside the quiet period. Other
+refusals stop execution. No import or export was needed for these baseline runs.
 
-```gdscript
-extends SceneTree
-func _initialize() -> void:
-    print("EXTERNAL SCRIPT PROBE")
-    quit(0)
+The wrapper prints its retained evidence directory under `TMPDIR`. It copies
+the executable and PCK byte for byte, runs an ordinary startup smoke, then
+writes `override.cfg` in that private directory. The config autoloads the
+external Node controller; the **original packed main scene boots normally**.
+The controller observes `get_tree().current_scene` once available. There is no
+second scene instance. Cache, data, config and both logs stay in the private
+copy. The original export and project settings remain untouched; the existing
+export exclusions keep `tools/` out of the shipped build.
+
+Each child has a 60-second wall bound with a further five-second termination
+bound. Startup uses `--quit-after 120`; gameplay uses `--quit-after 18000`.
+Both use `--headless --fixed-fps 60`. The wrapper rejects nonzero child exits,
+`ERROR:` or `SCRIPT ERROR:` output in either stage, and a missing or incomplete
+victory marker. Logs remain available on failure too.
+
+## What the controller proves
+
+`tools/winning-playthrough.gd` seeds RNG with 3 in `_enter_tree`. It injects
+real `InputEventKey` and `InputEventJoypadMotion` through
+`Input.parse_input_event`. Enter releases and panel checks occur on separate
+frames. It visits the title, opens Controls, returns through Back, then starts
+a fresh ordinary run using Begin. Gameplay follows:
+
+| Room | Chosen door | Observed foes | Entry frame | Entry HP |
+| --- | --- | --- | --- | --- |
+| 1 | EMBERS | 4 | 145 | 5 |
+| 2 | FONT | 0 | 512 | 5 |
+| 3 | EMBERS | 6 | 590 | 5 |
+| 4 | FONT | 0 | 988 | 5 |
+| 5 | THE DROWNED TOLLING | 1 | 1066 | 5 |
+
+The bot aims at the nearest foe, circles a rectangle below the doors, and
+dashes when nearby foes or projected hostile bolts threaten it. Once combat
+clears, it walks to the selected door. Keeping the combat path below the doors
+prevents accidentally entering a different reward as the last foe falls.
+
+All game properties are observations. The driver never assigns gameplay HP,
+positions, damage or invulnerability; calls private gameplay methods; emits
+defeat signals; mocks gameplay; or steps game time. Ordinary engine processing,
+bolts, collisions, damage, healing and room transitions determine the outcome.
+It rejects death, unexpected panels/transitions, a missing door and exhaustion
+of its 18,000-frame budget. Failure quits nonzero without a success marker.
+Victory requires the observed title/menu sequence, all five sequential rooms,
+the boss starting at 100 HP, second phase, a living keeper, exactly 11 kills,
+empty foe and upgrade lists, state `won`, visible overlay, victory heading
+`THE TOLLING FALLS SILENT` and replay button `CARRY ANOTHER LIGHT`.
+
+This is headless input coverage, not human visual/controller QA. It does not
+assess rendering quality, physical controller ergonomics, sound or other routes.
+
+## Artifact provenance
+
+The baseline export contains the production source at
+`5107b6e361b9c9f0b2c182b00dbd6e1d714cc27a`, built with Godot
+`4.7.2.stable.official.ed1daf0bf`. These runs exercised the wrapper from source
+head `60f6506c3a9f8d2bec82898973b0e9cbe7d2360a` plus this test-author change to
+the external controller. Production scripts/scenes/settings have not changed
+since the baseline export. The parent still needs a fresh export and wrapper
+run at the final combined head.
+
+SHA-256 (the two successful copies and original artifacts match):
+
+```text
+d9f79ab89b5ae369aeed11c6052d402e8218cd503bf85b4a235f9c30c46a7c63  lowtide-vigil.x86_64
+d0a200aabc293e232e8016b59cc7a64adff0c58e470990faf48ff0221681d719  lowtide-vigil.pck
+2232e8b706ab9f85de57d3bce9be1a5774ec9b94b4f0ec67c30480fae77377be  tools/winning-playthrough.gd
 ```
 
-The actual release help is retained in `exported-help-fallback.log`:
+## Wrapper contract tests
+
+`test/unit/test_winning_wrapper.gd` invokes the real shell wrapper in disposable
+sandboxes. Its child executables are protocol fixtures, **not gameplay win
+evidence**. The tests cover success, retained isolated logs/config, unchanged
+original binary/PCK, missing binary/PCK/driver, empty PCK, nonzero child exits
+even with a marker, startup/gameplay engine and script errors even with a
+marker, and absent/partial/surrounded markers. Every invocation has an outer
+15-second timeout. Fixtures check the child's launch arguments, working
+directory, autoload timing and isolated XDG paths. Sandbox cleanup removes only
+its own created files after retention assertions.
+
+Focused validation passed: **6 GUT methods, 101 assertions**, including all
+parameterized cases, with `GUT CI: passed`. The complete unit scope also passed:
+**33 methods, 188 assertions**, with no errors, pending cases or orphans.
+Run focused tests with the same shared-host heavy work policy:
 
 ```bash
-flock /config/engine/loops/heavy.lock timeout 10s \
-  "$workspace/build/linux/lowtide-vigil.x86_64" --help \
-  > "$workspace/.codex-run/evidence/exported-help-fallback.log" 2>&1
+heavy-run timeout 60s godot --headless --path "$PWD" \
+  --script addons/gut/gut_cmdln.gd -gconfig= -gdir=res://test/unit \
+  -gselect=test_winning_wrapper.gd \
+  -gpost_run_script=res://tools/gut-ci-post-run.gd \
+  -gexit -gignore_pause -gdisable_colors
 ```
 
-Main-thread backtraces and a short attached syscall trace from the first
-attempt remain in `playthrough-attempt-01-*-backtrace.log`,
-`playthrough-attempt-01-backtrace.log`, and
-`playthrough-attempt-01-strace.log`. A second backtrace is in
-`playthrough-attempt-02-backtrace.log`. No core dump was found in the worktree.
-
-Editor **parse-only** validation passed after correcting an inferred vector
-type; this did not execute the driver or count as exported gameplay evidence:
-
-```bash
-flock /config/engine/loops/heavy.lock timeout 20s godot \
-  --headless --path "$workspace" \
-  --script "$workspace/tools/winning-playthrough.gd" --check-only \
-  > "$workspace/.codex-run/evidence/playthrough-parse-02-fallback.log" 2>&1
-```
-
-Style and terminology commands (run from the worktree root):
-
-```bash
-/config/engine/tools/venv/bin/gdlint \
-  scripts tools/gut-ci-post-run.gd tools/winning-playthrough.gd
-/config/engine/tools/venv/bin/gdformat --check \
-  scripts tools/gut-ci-post-run.gd tools/winning-playthrough.gd
-git add tools/winning-playthrough.gd docs/winning-playthrough.md
-bash tools/term-gate.sh
-```
-
-Their final results are retained in `.codex-run/evidence/playthrough-checks.log`.
-Binary, PCK, and driver hashes are in `playthrough-artifacts.sha256`.
-
-## Acceptance after the launch blocker is resolved
-
-Keep the normal startup smoke separate. Launch the actual exported executable
-with the external driver from a scratch directory, `--fixed-fps 60`, an engine
-frame bound (`--quit-after 18001`), and a wall timeout. Retain the complete log.
-Require all of the following together: exit 0, exactly one complete
-`PLAYTHROUGH PASS` line, the expected title/controls/begin/room/boss/phase
-markers, positive surviving HP, and no `ERROR:`, `SCRIPT ERROR:`, or
-`PLAYTHROUGH FAIL` diagnostics. Reject timeout, nonzero exit, and a missing
-marker even if the executable itself exits successfully. Repeat once to check
-reproducibility and record both frame/HP outcomes.
-
-No executable shell gate or CI integration was added; this document retains
-the manual command and validation contract. There are no new gate mutants to
-run. The parent retains responsibility for the final existing mutation suite
-and for completing exported gameplay validation after resolving the blocker.
+Eight new wrapper mutants were appended to `tools/planted-mutants.sh`; the
+original 20 entries and runner semantics are preserved. The parent owns the
+final serial mutation run and full-suite results. The test author did not run
+the full mutation suite. Local raw diagnostics and GUT output remain under
+`.codex-run/evidence`; no core dump was found.
