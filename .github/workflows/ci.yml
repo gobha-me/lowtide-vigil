@@ -60,8 +60,8 @@ jobs:
           test -d scripts
           script=$(find scripts -type f -name '*.gd' -print -quit)
           test -n "$script"
-          gdlint scripts tools/gut-ci-post-run.gd
-          gdformat --check scripts tools/gut-ci-post-run.gd
+          gdlint scripts tools/gut-ci-post-run.gd tools/check-export.gd
+          gdformat --check scripts tools/gut-ci-post-run.gd tools/check-export.gd
       - name: Check player-facing terminology
         run: |
           set -euo pipefail
