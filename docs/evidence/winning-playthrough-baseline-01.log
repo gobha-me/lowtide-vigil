@@ -1,0 +1,25 @@
+heavy-run: refusing to start: memory.current 25.68 GiB, working set (minus inactive_file) 17.26 GiB; limits 17.50 GiB working set / 24.50 GiB memory.current (memory.max 28.00 GiB x 10/16, 14/16); memory.current over limit
+winning-playthrough: evidence /config/engine/loops/wt/lowtide-vigil/3-lowtide-vigil-20261103T020237Z/.codex-run/tmp/lowtide-playthrough.huOzMK
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PLAYTHROUGH TITLE frame=8
+PLAYTHROUGH CONTROLS frame=32
+PLAYTHROUGH BEGIN frame=64 hp=5
+PLAYTHROUGH ROOM frame=145 room=1 reward=EMBERS hp=5 foes=4
+PLAYTHROUGH ROOM frame=512 room=2 reward=FONT hp=5 foes=0
+PLAYTHROUGH ROOM frame=590 room=3 reward=EMBERS hp=5 foes=6
+PLAYTHROUGH PROGRESS frame=600 room=3 hp=5 foes=6 position=(675.2939, 580.9694)
+PLAYTHROUGH ROOM frame=988 room=4 reward=FONT hp=5 foes=0
+PLAYTHROUGH ROOM frame=1066 room=5 reward=THE DROWNED TOLLING hp=5 foes=1
+PLAYTHROUGH BOSS frame=1066 hp=100.0 max_hp=100.0
+PLAYTHROUGH PROGRESS frame=1200 room=5 hp=5 foes=1 position=(1081.08, 490.5729)
+PLAYTHROUGH HP frame=1279 room=5 hp=4
+PLAYTHROUGH PROGRESS frame=1800 room=5 hp=4 foes=1 position=(668.5214, 340.1931)
+PLAYTHROUGH PHASE2 frame=1889 boss_hp=49.0 hp=4
+PLAYTHROUGH HP frame=2287 room=5 hp=3
+PLAYTHROUGH PROGRESS frame=2400 room=5 hp=3 foes=1 position=(213.0915, 326.0286)
+PLAYTHROUGH PASS frame=2680 hp=3 phase2=true kills=11 dashes=18 route=EMBERS,FONT,EMBERS,FONT,THE DROWNED TOLLING
+WINNING PLAYTHROUGH: passed
+winning-playthrough: passed

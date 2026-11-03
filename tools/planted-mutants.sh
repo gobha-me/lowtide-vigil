@@ -81,6 +81,15 @@ mutants=(
 	'export-relative-pack-path|tools/check-export.sh|pack=$(realpath "$pack")|pack="$pack"'
 	'export-preset-include-tests|export_presets.cfg|,test/*|'
 	'export-preset-include-gut|export_presets.cfg|addons/gut/*,|'
+	'wrapper-child-status|tools/winning-playthrough.sh|if ((result != 0)); then|if ((result < 0)); then'
+	'wrapper-engine-errors|tools/winning-playthrough.sh|if grep -Eq|if false && grep -Eq'
+	'wrapper-victory-required|tools/winning-playthrough.sh|if ! grep -Fxq|if false && grep -Fxq'
+	'wrapper-victory-whole-line|tools/winning-playthrough.sh|grep -Fxq|grep -Fq'
+	'wrapper-empty-pack|tools/winning-playthrough.sh|-s "$pack"|-f "$pack"'
+	'wrapper-driver-required|tools/winning-playthrough.sh|-f "$driver"|-n "$driver"'
+	'wrapper-startup-required|tools/winning-playthrough.sh|run_export startup.log --quit-after 120|: startup smoke skipped'
+	'wrapper-preserve-binary|tools/winning-playthrough.sh|cp -- "$binary"|mv -- "$binary"'
+	'browser-resume-start-gate|web/lowtide-vigil.html|resume();PAD.startPrev=st;|resume();if(G.state!=="play")PAD.startPrev=st;'
 )
 
 results=()
