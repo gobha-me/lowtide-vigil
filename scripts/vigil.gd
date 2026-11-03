@@ -55,9 +55,14 @@ func _ready() -> void:
 	ui = VigilInterface.new()
 	add_child(ui)
 	_show_title()
+	if "--smoke" in OS.get_cmdline_user_args():
+		var smoke := preload("res://scripts/export_smoke.gd").new()
+		add_child(smoke)
 
 
 func _process(delta: float) -> void:
+	if state != "title":
+		ui.update_hud(keeper, embers, room, upgrades)
 	if Input.is_action_just_pressed("pause_run"):
 		if state == "play":
 			_pause_run()
@@ -89,13 +94,27 @@ func _process(delta: float) -> void:
 	ui.update_hud(keeper, embers, room, upgrades)
 
 
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("toggle_fullscreen") and not event.is_echo():
+		var fullscreen := DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
+		DisplayServer.window_set_mode(
+			(
+				DisplayServer.WINDOW_MODE_WINDOWED
+				if fullscreen
+				else DisplayServer.WINDOW_MODE_FULLSCREEN
+			)
+		)
+		get_viewport().set_input_as_handled()
+
+
 func _show_title() -> void:
 	state = "title"
+	_clear_room()
 	keeper.hide()
 	veil.hide()
 	ui.hud.text = ""
 	ui.banner.text = "ONE NIGHT. ONE TIDE. ONE LIGHT."
-	ui.status.text = "MILESTONE 1  /  THE OVERGROWN NAVE"
+	ui.status.text = "LEVEL 1  /  THE OVERGROWN NAVE"
 	ui.show_panel(
 		"LOWTIDE VIGIL",
 		(
@@ -118,6 +137,7 @@ func _show_controls() -> void:
 			+ "FIRE   hold left mouse / arrows / right stick\n"
 			+ "DASH   Space / Shift / right mouse / controller A or RB\n"
 			+ "PAUSE   Esc / P / controller Start\n\n"
+			+ "FULLSCREEN   F11 (starts windowed)\n\n"
 			+ "Dash through danger: you cannot be hurt during a dash.\n"
 			+ "Flames are health. Each lost flame shrinks your lantern's light.\n"
 			+ "Clear the room, then walk through a signed door to choose your reward.\n"
@@ -139,17 +159,24 @@ func _start_run() -> void:
 	keeper.dash_cooldown = 0.0
 	keeper.invulnerable = 0.0
 	keeper.fire_cooldown = 0.0
+	keeper.facing = Vector2.UP
+	keeper.dash_direction = Vector2.UP
+	keeper.walking_time = 0.0
 	keeper.position = Vector2(640, 560)
 	keeper.show()
 	veil.show()
 	room = 0
 	embers = 0
 	kills = 0
+	reward = ""
+	offered.clear()
+	shop_bought = false
 	upgrades.clear()
 	state = "play"
 	room_time = 0.0
 	ui.close_panel()
 	_open_doors()
+	ui.update_hud(keeper, embers, room, upgrades)
 	_announce("The roots have broken the seal. Choose your descent.", 4.0)
 
 
@@ -204,6 +231,8 @@ func _enter_room(chosen: String) -> void:
 			3.0
 		)
 
+	ui.update_hud(keeper, embers, room, upgrades)
+
 
 func _spawn_foe(kind: String, point: Vector2, elite: bool = false) -> void:
 	var foe := VigilFoe.new()
@@ -251,6 +280,7 @@ func _open_doors() -> void:
 		door.z_index = 20
 		doors.append(door)
 		add_child(door)
+	ui.update_hud(keeper, embers, room, upgrades)
 	ui.status.text = (
 		"ROOM CLEAR  /  Walk into a signed doorway to choose what waits beyond.\n"
 		+ "KINDLE: upgrade   EMBERS: hoard   ORDEAL: elite reward   FONT: heal   SHOP: spend"
@@ -258,6 +288,7 @@ func _open_doors() -> void:
 
 
 func _show_kindles() -> void:
+	ui.update_hud(keeper, embers, room, upgrades)
 	state = "reward"
 	offered = KINDLES.duplicate()
 	offered.shuffle()
@@ -301,6 +332,7 @@ func _show_shop() -> void:
 
 
 func _refresh_shop() -> void:
+	ui.update_hud(keeper, embers, room, upgrades)
 	ui.show_panel(
 		"THE CANDLEWRIGHT",
 		'"The shore is still watching, little wick."\nYou carry %d embers.' % embers
@@ -387,18 +419,22 @@ func _announce(text: String, duration: float) -> void:
 
 
 func _pause_run() -> void:
+	ui.update_hud(keeper, embers, room, upgrades)
 	state = "paused"
 	ui.show_panel("THE VIGIL WAITS", "The light holds while you rest.")
 	ui.add_button("RESUME", _resume_run)
+	ui.add_button("RESTART", _start_run)
 	ui.add_button("RETURN TO SHORE", _show_title)
 
 
 func _resume_run() -> void:
+	ui.update_hud(keeper, embers, room, upgrades)
 	state = "play"
 	ui.close_panel()
 
 
 func _lose_run() -> void:
+	ui.update_hud(keeper, embers, room, upgrades)
 	state = "lost"
 	ui.show_panel(
 		"THE LANTERN GOES OUT",
@@ -412,6 +448,7 @@ func _lose_run() -> void:
 
 
 func _win_run() -> void:
+	ui.update_hud(keeper, embers, room, upgrades)
 	state = "won"
 	ui.show_panel(
 		"THE TOLLING FALLS SILENT",
@@ -419,7 +456,7 @@ func _win_run() -> void:
 			"The Overgrown Nave is open. Far below, the Saint is still weeping.\n"
 			+ "A candle on the shore answers your lantern. The descent will continue.\n\n"
 			+ "LEVEL 1 COMPLETE  /  %d foes silenced  /  %d embers\n" % [kills, embers]
-			+ "The remaining four levels and shore unlocks await a later milestone."
+			+ "Return to the shore. The Saint's vigil is not yet over."
 		)
 	)
 	ui.add_button("CARRY ANOTHER LIGHT", _start_run)
