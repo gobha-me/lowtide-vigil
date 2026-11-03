@@ -1669,7 +1669,7 @@ function padMenus(){
   const nav=x>.5?1:x<-.5?-1:0;
   if(nav&&nav!==PAD.navPrev){const vis=[...document.querySelectorAll('.ov:not([hidden]) button:not([disabled])')];if(vis.length){let i=vis.indexOf(document.activeElement);i=(i+nav+vis.length)%vis.length;vis[i].focus();}}
   PAD.navPrev=nav;const a=bt(0);if(a&&!PAD.aPrev&&document.activeElement&&document.activeElement.tagName==='BUTTON')document.activeElement.click();PAD.aPrev=a;
-  const st=bt(9);if(st&&!PAD.startPrev&&G.state==='paused')resume();if(G.state!=='play')PAD.startPrev=st;
+  const st=bt(9);if(st&&!PAD.startPrev&&G.state==='paused')resume();PAD.startPrev=st;
 }
 window.addEventListener('keydown',e=>{
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)&&G.state==='play')e.preventDefault();

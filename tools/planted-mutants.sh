@@ -93,6 +93,7 @@ mutants=(
 	'lifecycle-f11-binding|scripts/controls.gd|bind_keys("toggle_fullscreen", [KEY_F11])|bind_keys("toggle_fullscreen", [KEY_F10])'
 	'lifecycle-f11-repeat|scripts/vigil.gd|event.is_action_pressed("toggle_fullscreen") and not event.is_echo()|event.is_action_pressed("toggle_fullscreen", true)'
 	'lifecycle-hud-paused|scripts/vigil.gd|if state != "title":|if state == "play":'
+	'browser-resume-start-gate|web/lowtide-vigil.html|resume();PAD.startPrev=st;|resume();if(G.state!=="play")PAD.startPrev=st;'
 )
 
 results=()

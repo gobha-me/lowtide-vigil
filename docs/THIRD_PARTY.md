@@ -14,12 +14,18 @@ Both builds load these local files and need no font service.
 GUT is vendored under `addons/gut` from pinned release **v9.6.1**:
 <https://github.com/bitwes/Gut/releases/tag/v9.6.1>.
 Source archive: <https://github.com/bitwes/Gut/archive/refs/tags/v9.6.1.zip>.
-Only the upstream addon and its MIT licence are included; no project tests
+The upstream addon and its MIT licence are included; no upstream project tests
 are supplied. The editor plugin is available but disabled by default.
 Third-party GDScript is excluded from our gdtoolkit style checks. Godot
 imports the addon; release exports exclude `addons/gut/*` because this is
 development tooling. The standalone licence is transcribed from the upstream
 licence block at the end of `gut.gd`.
+
+The addon's legacy `source_code_pro.fnt` bitmap resource derives from Adobe
+Source Code Pro. Its copyright and SIL Open Font License 1.1 notice is preserved
+verbatim in [the Source Code Pro notice](licenses/source-code-pro/OFL.txt), from
+the [official upstream licence](https://github.com/adobe-fonts/source-code-pro/blob/803b7e23ec97ae58b6232ea76519a76d428ba268/LICENSE.md).
+The resource remains byte-for-byte identical to GUT v9.6.1.
 
 ## CI tool downloads
 
