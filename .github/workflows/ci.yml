@@ -56,10 +56,6 @@ jobs:
           # GUT can exit zero before running tests; require the strict hook's success marker.
           grep -Fxq 'GUT CI: passed' "$TMPDIR/gut.log"
           if grep -Eq '(^ERROR:|^SCRIPT ERROR:)' "$TMPDIR/gut.log"; then exit 1; fi
-      # Contract: tools/planted-mutants.sh must apply each planted mutant, run GUT,
-      # list surviving mutants by name, and exit non-zero if any survive.
-      - name: Check planted mutants
-        run: bash tools/planted-mutants.sh
       - name: Install pinned GDScript tooling
         run: python3 -m pip install --require-hashes -r tools/ci-requirements.txt
       - name: Check GDScript style
@@ -90,6 +86,36 @@ jobs:
         run: bash tools/check-export.sh
       - name: Smoke check Linux release
         run: bash tools/export-smoke.sh
+      - name: Remove scratch directory
+        if: always()
+        run: python3 -c 'import os,shutil; shutil.rmtree(os.environ["TMPDIR"], ignore_errors=True)'
+
+  planted-mutants:
+    name: planted mutants
+    runs-on: ubuntu-24.04
+    # Own job and deadline: the 55-case mutant run no longer fits the ci job's 10-minute cap.
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    env:
+      GODOT_SILENCE_ROOT_WARNING: '1'
+      XDG_CACHE_HOME: ${{ github.workspace }}/.codex-run/cache
+      XDG_DATA_HOME: ${{ github.workspace }}/.codex-run/data
+      XDG_CONFIG_HOME: ${{ github.workspace }}/.codex-run/config
+      TMPDIR: /tmp/lowtide-m1-ci
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Prepare scratch directory
+        run: mkdir -p "$TMPDIR"
+      - name: Install Godot 4.7.2 and Linux export templates (SHA-512 verified)
+        run: bash tools/install-godot-ci.sh
+      # Contract: tools/planted-mutants.sh must apply each planted mutant, run GUT,
+      # list surviving mutants by name, and exit non-zero if any survive.
+      - name: Check planted mutants
+        run: bash tools/planted-mutants.sh
       - name: Remove scratch directory
         if: always()
         run: python3 -c 'import os,shutil; shutil.rmtree(os.environ["TMPDIR"], ignore_errors=True)'
