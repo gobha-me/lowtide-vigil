@@ -309,18 +309,23 @@ func _apply_kindle(kindle: Dictionary, power: float = 1.0) -> void:
 		"damage":
 			keeper.damage *= 1.0 + 0.35 * power
 		"twin":
-			if keeper.twin_wick:
-				keeper.damage *= 1.25
+			var bonus_power := power if keeper.twin_wick else maxf(0.0, power - 1.0)
+			keeper.damage *= 1.0 + 0.25 * bonus_power
 			keeper.twin_wick = true
 		"speed":
 			keeper.fire_interval = maxf(0.08, keeper.fire_interval * (1.0 - 0.25 * power))
 		"health":
-			keeper.max_hp += 1
-			keeper.hp += 1
+			# Whole-flame rewards round up to retain fractional power.
+			var flames := ceili(power)
+			keeper.max_hp += flames
+			keeper.hp += flames
 		"dash":
 			keeper.max_dash_cooldown *= 1.0 - 0.25 * power
 		"heal":
-			keeper.hp = mini(keeper.max_hp, keeper.hp + 3)
+			if power == 1.0:
+				keeper.hp = mini(keeper.max_hp, keeper.hp + 3)
+			else:
+				keeper.hp = mini(keeper.max_hp, keeper.hp + ceili(3.0 * power))
 
 
 func _show_shop() -> void:
