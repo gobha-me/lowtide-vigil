@@ -111,13 +111,26 @@ func _bindings(action: String) -> Array:
 	return _sorted(bindings)
 
 
+func _canonical_bindings(action: String) -> Array:
+	var bindings: Array = BINDINGS[action].duplicate(true)
+	# Keyboard and mouse use Godot's native default devices, not controller device 0.
+	var key_device := InputEventKey.new().device
+	var mouse_device := InputEventMouseButton.new().device
+	for binding: Array in bindings:
+		if binding[0] == "key":
+			binding[3] = key_device
+		elif binding[0] == "mouse":
+			binding[2] = mouse_device
+	return _sorted(bindings)
+
+
 func _assert_canonical(action: String) -> void:
 	assert_true(InputMap.has_action(action), "missing managed action: " + action)
 	if not InputMap.has_action(action):
 		return
 	assert_almost_eq(InputMap.action_get_deadzone(action), 0.22, 0.0001, action)
 	assert_eq(
-		_bindings(action), _sorted(BINDINGS[action]), "exact binding identities/count: " + action
+		_bindings(action), _canonical_bindings(action), "exact binding identities/count: " + action
 	)
 
 
