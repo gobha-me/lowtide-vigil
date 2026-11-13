@@ -1,12 +1,17 @@
 class_name VigilInterface
 extends CanvasLayer
 
+signal confirmed
+
 var hud: Label
 var status: Label
 var banner: Label
 var overlay: ColorRect
 var panel: VBoxContainer
 var heading_font: Font = preload("res://assets/fonts/silkscreen/Silkscreen-Regular.ttf")
+var volume_label: Label
+var volume_slider: HSlider
+var mute_button: Button
 
 
 func _ready() -> void:
@@ -54,6 +59,9 @@ func make_label(text: String, size: int, heading: bool = false) -> Label:
 
 
 func show_panel(title: String, text: String) -> void:
+	volume_label = null
+	volume_slider = null
+	mute_button = null
 	for child in panel.get_children():
 		panel.remove_child(child)
 		child.queue_free()
@@ -72,11 +80,44 @@ func add_button(text: String, callback: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.custom_minimum_size = Vector2(940, 62)
+	button.pressed.connect(func(): confirmed.emit())
 	button.pressed.connect(callback)
 	panel.add_child(button)
 	if panel.get_child_count() == 3:
 		button.grab_focus()
 	return button
+
+
+func add_audio_controls(audio: VigilAudio) -> void:
+	var row := HBoxContainer.new()
+	row.custom_minimum_size = Vector2(940, 52)
+	row.add_theme_constant_override("separation", 18)
+	panel.add_child(row)
+	volume_label = make_label("", 23)
+	volume_label.custom_minimum_size.x = 190
+	row.add_child(volume_label)
+	volume_slider = HSlider.new()
+	volume_slider.max_value = 100.0
+	volume_slider.step = 1.0
+	volume_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	volume_slider.tooltip_text = "Master volume: use Left and Right to adjust."
+	row.add_child(volume_slider)
+	mute_button = Button.new()
+	mute_button.custom_minimum_size.x = 280
+	mute_button.pressed.connect(audio.toggle_mute)
+	mute_button.pressed.connect(func(): confirmed.emit())
+	row.add_child(mute_button)
+	refresh_audio_controls(audio)
+	volume_slider.value_changed.connect(func(value: float): audio.set_master_volume(value / 100.0))
+	volume_slider.grab_focus()
+
+
+func refresh_audio_controls(audio: VigilAudio) -> void:
+	if not is_instance_valid(volume_slider):
+		return
+	volume_label.text = "MASTER %d%%" % roundi(audio.master_volume * 100.0)
+	volume_slider.set_value_no_signal(audio.master_volume * 100.0)
+	mute_button.text = "SOUND: MUTED [M]" if audio.muted else "SOUND: ON [M]"
 
 
 func close_panel() -> void:

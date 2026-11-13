@@ -15,6 +15,7 @@ static func configure() -> void:
 	bind_keys("dash", [KEY_SPACE, KEY_SHIFT])
 	bind_keys("pause_run", [KEY_ESCAPE, KEY_P])
 	bind_keys("toggle_fullscreen", [KEY_F11])
+	bind_keys("toggle_mute", [KEY_M])
 	bind_axis("move_left", JOY_AXIS_LEFT_X, -1.0)
 	bind_axis("move_right", JOY_AXIS_LEFT_X, 1.0)
 	bind_axis("move_up", JOY_AXIS_LEFT_Y, -1.0)
