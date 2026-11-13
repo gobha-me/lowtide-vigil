@@ -404,7 +404,8 @@ func _step_bolts(delta: float) -> void:
 						foe.take_hit(bolt.damage)
 						bolt.spent = true
 						break
-		if bolt.spent:
+		# Room-clear callbacks can already have removed and queued this bolt.
+		if bolt.spent and bolts.has(bolt):
 			bolts.erase(bolt)
 			bolt.queue_free()
 
