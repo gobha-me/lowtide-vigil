@@ -1,51 +1,111 @@
 #!/usr/bin/env bash
 # Apply each planted mutant to a temp copy, run the unit tests, and fail if any survive.
 # The real tree is never changed: everything happens under one mktemp directory.
+# Shards are zero-based: original catalog index modulo --shards selects --shard.
+# With no options, run the entire catalog as shard 0 of 1.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-prefix="${TMPDIR:-/tmp}/lowtide-mutants."
-dir=$(mktemp -d "${prefix}XXXXXX")
-cleanup() {
-	if [[ "$dir" == "$prefix"* && -d "$dir" ]]; then
-		python3 -c 'import shutil,sys; shutil.rmtree(sys.argv[1])' "$dir"
+shard="${MUTANT_SHARD:-0}"
+shards="${MUTANT_SHARDS:-1}"
+manifest="${MUTANT_MANIFEST:-}"
+while (($#)); do
+	case "$1" in
+		--shard|--shards|--manifest)
+			(($# >= 2)) || { echo "planted-mutants: $1 requires a value" >&2; exit 2; }
+			case "$1" in
+				--shard) shard="$2" ;;
+				--shards) shards="$2" ;;
+				--manifest) manifest="$2" ;;
+			esac
+			shift 2
+			;;
+		-h|--help)
+			echo "usage: $0 [--shard K --shards N] [--manifest PATH]"
+			echo "K is zero-based; defaults: MUTANT_SHARD=0 MUTANT_SHARDS=1."
+			exit 0
+			;;
+		*) echo "planted-mutants: unknown option $1" >&2; exit 2 ;;
+	esac
+done
+# Bound arithmetic and reject signs, expressions and shell octal interpretation.
+for number in "$shard" "$shards"; do
+	if [[ ! "$number" =~ ^[0-9]{1,9}$ ]]; then
+		echo "planted-mutants: shard values must be nonnegative decimal integers (at most 9 digits)" >&2
+		exit 2
 	fi
-}
-trap cleanup EXIT
-
-copy="$dir/repo"
-mkdir "$copy"
-# Tracked files plus the (possibly not yet committed) test files.
-{
-	git ls-files -z
-	git ls-files -z --others --exclude-standard -- test
-} | tar --null -T - -cf - | tar -xf - -C "$copy"
-
-godot --headless --path "$copy" --import >"$dir/import.log" 2>&1 || {
-	cat "$dir/import.log"
-	echo "planted-mutants: import of the temp copy failed" >&2
-	exit 1
-}
-
-# Same flags and post-run hook as CI, over the unit tests only.
-run_gut() {
-	godot --headless --path "$copy" --script addons/gut/gut_cmdln.gd \
-		-gconfig= -gdir=res://test/unit -ginclude_subdirs -gprefix=test_ -gsuffix=.gd \
-		-gpost_run_script=res://tools/gut-ci-post-run.gd \
-		-gexit -gignore_pause -gdisable_colors >"$1" 2>&1
-}
-
-gut_passed() {
-	local log="$1"
-	run_gut "$log" || return 1
-	grep -Fxq 'GUT CI: passed' "$log"
-}
-
-if ! gut_passed "$dir/baseline.log"; then
-	cat "$dir/baseline.log"
-	echo "planted-mutants: baseline red: the unmutated copy does not pass" >&2
-	exit 1
+done
+shard=$((10#$shard))
+shards=$((10#$shards))
+if ((shards < 1 || shard >= shards)); then
+	echo "planted-mutants: require 0 <= shard < shards and shards >= 1" >&2
+	exit 2
 fi
+manifest="${manifest:-$PWD/mutant-manifest-$shard-of-$shards.json}"
+
+clock_ns() { python3 -c 'import time; print(time.monotonic_ns())'; }
+started=$(clock_ns)
+active_name=""
+active_index=""
+active_started=""
+manifest_ready=0
+
+# Replace atomically after every event: cancellation can never leave a complete
+# manifest from an earlier attempt, or truncate the last recorded result.
+manifest_update() {
+	python3 - "$manifest" "$started" "$shard" "$shards" "$@" <<'MANIFEST_PY'
+import hashlib
+import json
+import os
+from pathlib import Path
+import sys
+import tempfile
+import time
+
+path = Path(sys.argv[1])
+started, shard, shards = map(int, sys.argv[2:5])
+event, *args = sys.argv[5:]
+now = time.monotonic_ns()
+if event == "init":
+    catalog = args
+    data = {
+        "schema_version": 1, "shard": shard, "shards": shards,
+        "catalog_sha256": hashlib.sha256(("\n".join(catalog) + "\n").encode()).hexdigest(),
+        "complete": False,
+        "baseline": {"outcome": "pending", "duration_seconds": None},
+        "mutants": [],
+    }
+else:
+    data = json.loads(path.read_text())
+    if event == "baseline":
+        outcome, began = args
+        data["baseline"] = {"outcome": outcome, "duration_seconds": (now - int(began)) / 1e9}
+        print(f"BASELINE shard={shard}/{shards} outcome={outcome} "
+              f"duration_seconds={data['baseline']['duration_seconds']:.6f}", flush=True)
+    elif event == "mutant":
+        name, index, outcome, began = args
+        result = {"name": name, "index": int(index), "shard": shard,
+                  "outcome": outcome, "duration_seconds": (now - int(began)) / 1e9}
+        data["mutants"].append(result)
+        print(f"MUTANT name={name} index={index} shard={shard}/{shards} "
+              f"outcome={outcome} duration_seconds={result['duration_seconds']:.6f}", flush=True)
+    elif event == "complete":
+        data["complete"] = True
+    elif event != "exit":
+        raise ValueError(f"unknown manifest event: {event}")
+data["duration_seconds"] = (now - started) / 1e9
+path.parent.mkdir(parents=True, exist_ok=True)
+fd, temporary = tempfile.mkstemp(prefix=path.name + ".", dir=path.parent)
+try:
+    with os.fdopen(fd, "w") as stream:
+        json.dump(data, stream, indent=2, allow_nan=False)
+        stream.write("\n")
+    os.replace(temporary, path)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+MANIFEST_PY
+}
 
 # name|file|anchor|replacement (each anchor must occur exactly once in its file)
 # PCK virtual directories expose hidden entries regardless of include_hidden;
@@ -108,11 +168,81 @@ mutants=(
 	'browser-resume-start-gate|web/lowtide-vigil.html|resume();PAD.startPrev=st;|resume();if(G.state!=="play")PAD.startPrev=st;'
 )
 
+prefix="${TMPDIR:-/tmp}/lowtide-mutants."
+dir=""
+cleanup() {
+	local status=$?
+	trap - EXIT
+	if ((manifest_ready)); then
+		if [[ -n "$active_name" ]]; then
+			manifest_update mutant "$active_name" "$active_index" error "$active_started" || status=1
+		fi
+		manifest_update exit || status=1
+	fi
+	if [[ "$dir" == "$prefix"* && -d "$dir" ]]; then
+		python3 -c 'import shutil,sys; shutil.rmtree(sys.argv[1])' "$dir" || status=1
+	fi
+	exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+manifest_update init "${mutants[@]}"
+manifest_ready=1
+echo "planted-mutants: shard=$shard/$shards manifest=$manifest"
+dir=$(mktemp -d "${prefix}XXXXXX")
+
+copy="$dir/repo"
+mkdir "$copy"
+# Tracked files plus the (possibly not yet committed) test files.
+{
+	git ls-files -z
+	git ls-files -z --others --exclude-standard -- test
+} | tar --null -T - -cf - | tar -xf - -C "$copy"
+
+# Every shard imports and runs its own entire unmutated unit baseline.
+baseline_started=$(clock_ns)
+if ! godot --headless --path "$copy" --import >"$dir/import.log" 2>&1; then
+	manifest_update baseline error "$baseline_started"
+	cat "$dir/import.log"
+	echo "planted-mutants: import of the temp copy failed" >&2
+	exit 1
+fi
+
+# Same flags and post-run hook as CI, over the unit tests only.
+run_gut() {
+	godot --headless --path "$copy" --script addons/gut/gut_cmdln.gd \
+		-gconfig= -gdir=res://test/unit -ginclude_subdirs -gprefix=test_ -gsuffix=.gd \
+		-gpost_run_script=res://tools/gut-ci-post-run.gd \
+		-gexit -gignore_pause -gdisable_colors >"$1" 2>&1
+}
+
+gut_passed() {
+	local log="$1"
+	run_gut "$log" || return 1
+	grep -Fxq 'GUT CI: passed' "$log"
+}
+
+if ! gut_passed "$dir/baseline.log"; then
+	manifest_update baseline failed "$baseline_started"
+	cat "$dir/baseline.log"
+	echo "planted-mutants: baseline red: the unmutated copy does not pass" >&2
+	exit 1
+fi
+manifest_update baseline passed "$baseline_started"
+
 results=()
 survivors=()
 killed=0
-for mutant in "${mutants[@]}"; do
+selected=0
+for index in "${!mutants[@]}"; do
+	((index % shards == shard)) || continue
+	mutant="${mutants[$index]}"
 	IFS='|' read -r name file anchor replacement <<<"$mutant"
+	active_name="$name"
+	active_index="$index"
+	active_started=$(clock_ns)
+	selected=$((selected + 1))
 	target="$copy/$file"
 	# Read verbatim, keeping trailing newlines.
 	content="$(
@@ -131,16 +261,21 @@ for mutant in "${mutants[@]}"; do
 	if gut_passed "$dir/$name.log"; then
 		results+=("SURVIVED $name")
 		survivors+=("$name")
+		outcome=survived
 	else
 		results+=("KILLED $name")
 		killed=$((killed + 1))
+		outcome=killed
 	fi
 	cp "$dir/original" "$target"
+	manifest_update mutant "$name" "$index" "$outcome" "$active_started"
+	active_name=""
 done
 
+manifest_update complete
 printf '%s\n' "${results[@]}"
 echo "survivors: ${survivors[*]:-}"
-echo "totals: ${#mutants[@]} mutants, $killed killed, ${#survivors[@]} survived"
+echo "totals: $selected mutants, $killed killed, ${#survivors[@]} survived (shard $shard/$shards)"
 if ((${#survivors[@]} > 0)); then
 	exit 1
 fi
