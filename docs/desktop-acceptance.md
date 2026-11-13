@@ -10,7 +10,8 @@ heavy-run bash tools/desktop-acceptance.sh /path/to/lowtide-vigil.x86_64
 ```
 
 On the shared Engine desktop, use the pinned absolute heavy-run path and
-desktop temp-heavy wrapper required by the lane rules. Imports, exports,+GUT and mutation validation remain separate gates; this command adds no CI
+desktop temp-heavy wrapper required by the lane rules. Imports, exports,
+GUT and mutation validation remain separate gates; this command adds no CI
 workflow changes. Set `TMPDIR` to the lane's private scratch directory.
 
 The wrapper copies the binary and pack into a unique
@@ -53,6 +54,14 @@ The driver injects press/release events through Godot's input pipeline:
 `DESKTOP ACCEPTANCE: passed` means those automatable checks completed. It
 does not establish physical controller ergonomics, visible focus contrast,
 sound, rendered output or actual fullscreen transitions on a headless backend.
+
+Independent test-author coverage lives in
+`test/unit/test_vigil_controls_contract.gd` (exact native bindings and deadzones),
+`test/unit/test_native_controller_input.gd` (real scene/controller/menu paths)
+and `test/unit/test_desktop_acceptance_wrapper.gd` (wrapper boundary failures,
+artifact preservation and retained evidence). Protocol executables in the
+wrapper tests provide no gameplay or display evidence. Existing assertions
+and the separate F11 screen coverage remain unchanged.
 
 No runtime result is recorded for this implementation yet. The first import
 attempt on 2026-11-13 was refused by the desktop temp-heavy lock with exit 75;
