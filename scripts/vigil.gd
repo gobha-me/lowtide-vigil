@@ -22,6 +22,7 @@ const ROOM_REWARDS := [
 ]
 
 var keeper: VigilKeeper
+var audio: VigilAudio
 var ui: VigilInterface
 var veil: Node2D
 var foes: Array[VigilFoe] = []
@@ -41,12 +42,16 @@ var shop_bought := false
 
 func _ready() -> void:
 	VigilControls.configure()
+	audio = VigilAudio.new()
+	add_child(audio)
 	add_child(preload("res://scripts/nave.gd").new())
 	keeper = VigilKeeper.new()
 	keeper.z_index = 2
 	keeper.fired.connect(_fire_bolt)
 	keeper.extinguished.connect(_lose_run)
 	keeper.damaged.connect(func(): _announce("A flame gutters. Keep the vigil.", 1.2))
+	keeper.damaged.connect(audio.play_cue.bind(&"keeper_hurt"))
+	keeper.dashed.connect(audio.play_cue.bind(&"dash"))
 	add_child(keeper)
 	veil = preload("res://scripts/veil.gd").new()
 	veil.keeper = keeper
@@ -54,6 +59,8 @@ func _ready() -> void:
 	add_child(veil)
 	ui = VigilInterface.new()
 	add_child(ui)
+	ui.confirmed.connect(audio.play_cue.bind(&"menu_confirm"))
+	audio.settings_changed.connect(ui.refresh_audio_controls.bind(audio))
 	_show_title()
 	if "--smoke" in OS.get_cmdline_user_args():
 		var smoke := preload("res://scripts/export_smoke.gd").new()
@@ -95,6 +102,9 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("toggle_mute") and not event.is_echo():
+		audio.toggle_mute()
+		get_viewport().set_input_as_handled()
 	if event.is_action_pressed("toggle_fullscreen") and not event.is_echo():
 		var fullscreen := DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
 		DisplayServer.window_set_mode(
@@ -136,14 +146,15 @@ func _show_controls() -> void:
 			"MOVE   WASD / left stick\n"
 			+ "FIRE   hold left mouse / arrows / right stick\n"
 			+ "DASH   Space / Shift / right mouse / controller A or RB\n"
-			+ "PAUSE   Esc / P / controller Start\n\n"
-			+ "FULLSCREEN   F11 (starts windowed)\n\n"
+			+ "PAUSE   Esc / P / controller Start\n"
+			+ "FULLSCREEN   F11 (starts windowed)   /   MUTE   M\n\n"
 			+ "Dash through danger: you cannot be hurt during a dash.\n"
 			+ "Flames are health. Each lost flame shrinks your lantern's light.\n"
 			+ "Clear the room, then walk through a signed door to choose your reward.\n"
 			+ "Menu: mouse, arrows and Enter, or controller D-pad and A."
 		)
 	)
+	ui.add_audio_controls(audio)
 	ui.add_button("BACK TO THE SHORE", _show_title)
 
 
@@ -193,6 +204,7 @@ func _clear_room() -> void:
 
 
 func _enter_room(chosen: String) -> void:
+	audio.play_cue(&"reward")
 	_clear_room()
 	room += 1
 	reward = chosen
@@ -259,6 +271,7 @@ func _foe_defeated(foe: VigilFoe) -> void:
 			_show_kindles()
 		else:
 			embers += 22
+			audio.play_cue(&"reward")
 			_announce("A hoard of embers. The doors are open.", 3.0)
 			_open_doors()
 
@@ -288,6 +301,7 @@ func _open_doors() -> void:
 
 
 func _show_kindles() -> void:
+	audio.play_cue(&"reward")
 	ui.update_hud(keeper, embers, room, upgrades)
 	state = "reward"
 	offered = KINDLES.duplicate()
@@ -304,6 +318,7 @@ func _take_kindle(kindle: Dictionary) -> void:
 
 
 func _apply_kindle(kindle: Dictionary, power: float = 1.0) -> void:
+	audio.play_cue(&"reward")
 	upgrades.append(kindle.name)
 	match kindle.effect:
 		"damage":
@@ -362,6 +377,7 @@ func _buy_mend() -> void:
 		return
 	embers -= 10
 	keeper.hp = mini(keeper.max_hp, keeper.hp + 2)
+	audio.play_cue(&"reward")
 	_refresh_shop()
 
 
@@ -401,6 +417,7 @@ func _step_bolts(delta: float) -> void:
 			else:
 				for foe: VigilFoe in foes.duplicate():
 					if _bolt_near(foe.position, previous, bolt.position, foe.radius + 5):
+						audio.play_cue(&"friendly_hit")
 						foe.take_hit(bolt.damage)
 						bolt.spent = true
 						break
@@ -419,6 +436,7 @@ func _announce(text: String, duration: float) -> void:
 
 
 func _pause_run() -> void:
+	audio.play_cue(&"pause")
 	ui.update_hud(keeper, embers, room, upgrades)
 	state = "paused"
 	ui.show_panel("THE VIGIL WAITS", "The light holds while you rest.")
@@ -428,12 +446,14 @@ func _pause_run() -> void:
 
 
 func _resume_run() -> void:
+	audio.play_cue(&"pause")
 	ui.update_hud(keeper, embers, room, upgrades)
 	state = "play"
 	ui.close_panel()
 
 
 func _lose_run() -> void:
+	audio.play_cue(&"loss")
 	ui.update_hud(keeper, embers, room, upgrades)
 	state = "lost"
 	ui.show_panel(
@@ -448,6 +468,7 @@ func _lose_run() -> void:
 
 
 func _win_run() -> void:
+	audio.play_cue(&"win")
 	ui.update_hud(keeper, embers, room, upgrades)
 	state = "won"
 	ui.show_panel(

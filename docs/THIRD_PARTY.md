@@ -1,5 +1,11 @@
 # Third-party materials
 
+## Native audio
+
+The Level 1 cues in `scripts/audio.gd` are original synthesized tones generated
+in memory from sine waves with a short envelope. They use no third-party
+samples, music, services or downloads and are covered by the repository licence.
+
 ## Fonts
 
 Pixelify Sans (variable weight) and Silkscreen (regular and bold) are bundled
