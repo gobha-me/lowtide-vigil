@@ -34,6 +34,9 @@ static func configure() -> void:
 static func bind_keys(action: String, keys: Array) -> void:
 	if not InputMap.has_action(action):
 		InputMap.add_action(action, 0.22)
+	else:
+		InputMap.action_erase_events(action)
+		InputMap.action_set_deadzone(action, 0.22)
 	for key: int in keys:
 		var event := InputEventKey.new()
 		event.physical_keycode = key
