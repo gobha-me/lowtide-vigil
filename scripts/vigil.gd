@@ -12,6 +12,11 @@ const KINDLES := [
 	},
 	{"name": "Light Step", "description": "Dash recovers 25% sooner.", "effect": "dash"},
 	{"name": "Phoenix Ash", "description": "Relight three missing flames.", "effect": "heal"},
+	{
+		"name": "Long Burn",
+		"description": "Bolts fly 22% faster and last 12% longer.",
+		"effect": "long"
+	},
 ]
 const ROOM_REWARDS := [
 	["KINDLE", "EMBERS", "ORDEAL"],
@@ -37,6 +42,8 @@ var banner_time := 0.0
 var upgrades: Array[String] = []
 var offered: Array = []
 var shop_bought := false
+# Additive stacks, weighted by reward power (an ORDEAL contributes 1.5).
+var long_burn_power := 0.0
 
 
 func _ready() -> void:
@@ -110,6 +117,7 @@ func _input(event: InputEvent) -> void:
 func _show_title() -> void:
 	state = "title"
 	_clear_room()
+	long_burn_power = 0.0
 	keeper.hide()
 	veil.hide()
 	ui.hud.text = ""
@@ -149,6 +157,7 @@ func _show_controls() -> void:
 
 func _start_run() -> void:
 	_clear_room()
+	long_burn_power = 0.0
 	keeper.hp = 5
 	keeper.max_hp = 5
 	keeper.damage = 1.0
@@ -321,6 +330,8 @@ func _apply_kindle(kindle: Dictionary, power: float = 1.0) -> void:
 			keeper.max_dash_cooldown *= 1.0 - 0.25 * power
 		"heal":
 			keeper.hp = mini(keeper.max_hp, keeper.hp + 3)
+		"long":
+			long_burn_power += power
 
 
 func _show_shop() -> void:
@@ -382,6 +393,9 @@ func _make_bolt(
 	bolt.speed = speed
 	bolt.hostile = hostile
 	bolt.damage = damage
+	if not hostile:
+		bolt.speed *= 1.0 + 0.22 * long_burn_power
+		bolt.lifetime *= 1.0 + 0.12 * long_burn_power
 	bolt.z_index = 3
 	bolts.append(bolt)
 	add_child(bolt)
