@@ -12,7 +12,8 @@ From the project root, prepare isolated temporary state (on the burn desktop,
 use a directory beneath `$CODEX_BURN_WORK`):
 
 ```sh
-mkdir -p .test-state/data .test-state/config .test-state/cache
+mkdir -p .test-state/tmp .test-state/data .test-state/config .test-state/cache
+export TMPDIR="$PWD/.test-state/tmp"
 export XDG_DATA_HOME="$PWD/.test-state/data"
 export XDG_CONFIG_HOME="$PWD/.test-state/config"
 export XDG_CACHE_HOME="$PWD/.test-state/cache"
