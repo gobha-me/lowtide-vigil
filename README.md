@@ -48,6 +48,8 @@ heavy-run bash tools/winning-playthrough.sh
 The export produces `build/linux/lowtide-vigil.x86_64` and its `.pck`; ship
 both together. The input-only exported win check and retained evidence are
 described in [winning playthrough](docs/winning-playthrough.md).
+Synthetic keyboard/controller menu checks and their headless display limits
+are described in [desktop acceptance](docs/desktop-acceptance.md).
 Install the matching 4.7.2.stable export templates first. The export smoke
 checks ordinary boot and the title, controls, start, pause, restart, shore
 and quit buttons using the opt-in `-- --smoke` argument. Its bounded runs
