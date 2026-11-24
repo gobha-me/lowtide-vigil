@@ -5,6 +5,7 @@ extends Node2D
 signal fired(origin: Vector2, direction: Vector2)
 signal extinguished
 signal damaged
+signal dashed
 
 const SPEED := 235.0
 const DASH_SPEED := 790.0
@@ -43,6 +44,7 @@ func step(delta: float) -> void:
 		dash_left = DASH_TIME
 		dash_cooldown = max_dash_cooldown
 		dash_direction = movement.normalized() if movement.length() > 0.1 else facing
+		dashed.emit()
 	if dash_left > 0.0:
 		position += dash_direction * DASH_SPEED * delta
 		dash_left = maxf(0.0, dash_left - delta)

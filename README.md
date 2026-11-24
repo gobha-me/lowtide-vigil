@@ -18,6 +18,10 @@ arrow keys or right stick. Dash with Space, Shift, right mouse, controller
 A or RB; dashing grants invulnerability. Pause with Esc, P or Start.
 Use mouse, arrows/Enter or controller D-pad/A for menus. Walk into a signed
 door after clearing a room. F11 toggles fullscreen; the game starts windowed.
+M toggles sound globally. Controls & the Lantern offers a master volume slider
+and mute button; both settings persist in `user://audio.cfg` across launches.
+The default master volume is 85%. Original synthesized cues accompany menus,
+pause/resume, dashes, hits, hurt, rewards, victory and defeat.
 Pause offers Resume, Restart and Return to Shore. Victory and defeat also
 let you return to shore and begin again without relaunching. Your flames are health and light: the lantern
 radius scales by `0.5 + 0.5 * hp / maxhp`.
@@ -26,7 +30,7 @@ The full browser reference remains at [web/lowtide-vigil.html](web/lowtide-vigil
 Open it directly, or serve the repo with `python3 -m http.server 8000` and
 visit `/web/lowtide-vigil.html`. Fonts are bundled for offline play.
 The browser has the original five-floor run; the native slice is a focused
-Level 1 implementation rather than a feature-complete port. Browser audio,
+Level 1 implementation rather than a feature-complete port. The full browser score,
 touch controls, remaining levels, and the full upgrade pool are future
 native work. Shore windows and starting-lantern unlocks are planned in the
 [DRAFT story hook](docs/story-hook.md); they are not awarded for slice wins.
