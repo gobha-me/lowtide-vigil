@@ -396,6 +396,7 @@ func _make_bolt(
 	if not hostile:
 		bolt.speed *= 1.0 + 0.22 * long_burn_power
 		bolt.lifetime *= 1.0 + 0.12 * long_burn_power
+		bolt.sweep_on_arena_exit = long_burn_power > 0.0
 	bolt.z_index = 3
 	bolts.append(bolt)
 	add_child(bolt)
@@ -406,15 +407,27 @@ func _step_bolts(delta: float) -> void:
 		if state != "play":
 			break
 		var previous := bolt.position
+		var sweep_on_exit := bolt.sweep_on_arena_exit and not bolt.spent
 		bolt.step(delta)
-		if not bolt.spent:
+		var sweep_end := bolt.position
+		var can_hit := not bolt.spent
+		if (
+			bolt.spent
+			and sweep_on_exit
+			and bolt.lifetime > 0.0
+			and VigilBolt.ARENA.has_point(previous)
+		):
+			# A Long Burn shot can still hit along the part of its path inside the arena.
+			sweep_end = bolt.arena_exit_point(previous)
+			can_hit = true
+		if can_hit:
 			if bolt.hostile:
 				if _bolt_near(keeper.position, previous, bolt.position, 16.0):
 					keeper.hurt()
 					bolt.spent = true
 			else:
 				for foe: VigilFoe in foes.duplicate():
-					if _bolt_near(foe.position, previous, bolt.position, foe.radius + 5):
+					if _bolt_near(foe.position, previous, sweep_end, foe.radius + 5):
 						foe.take_hit(bolt.damage)
 						bolt.spent = true
 						break
