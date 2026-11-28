@@ -10,11 +10,12 @@ var spent := false
 
 
 func step(delta: float) -> void:
+	if spent:
+		return
 	position += direction * speed * delta
 	lifetime -= delta
 	if lifetime <= 0.0 or not Rect2(65, 160, 1150, 500).has_point(position):
 		spent = true
-		queue_free()
 	queue_redraw()
 
 
